@@ -134,6 +134,12 @@ public class MultiPlatformIntegrationTestGenerated extends AbstractMultiPlatform
             doTest(fileName);
         }
 
+        @TestMetadata("functionIncorrectSignatureFromSuperclass")
+        public void testFunctionIncorrectSignatureFromSuperclass() throws Exception {
+            String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/multiplatform/classScopes/functionIncorrectSignatureFromSuperclass/");
+            doTest(fileName);
+        }
+
         @TestMetadata("missingConstructor")
         public void testMissingConstructor() throws Exception {
             String fileName = KotlinTestUtils.navigationMetadata("compiler/testData/multiplatform/classScopes/missingConstructor/");
