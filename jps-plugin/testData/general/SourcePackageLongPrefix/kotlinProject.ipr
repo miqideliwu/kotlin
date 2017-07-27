@@ -28,5 +28,12 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="" />
   </component>
+  <component name="libraryTable">
+    <library name="KotlinRuntime">
+      <CLASSES>
+        <root url="jar://$APPLICATION_HOME_DIR$/../dist/kotlinc/lib/kotlin-stdlib.jar!/" />
+      </CLASSES>
+    </library>
+  </component>
 </project>
 
