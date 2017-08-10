@@ -356,6 +356,7 @@ abstract class AbstractDiagnosticsTest : BaseDiagnosticsTest() {
             testFiles: List<TestFile>,
             modules: Map<TestModule?, ModuleDescriptorImpl>
     ) {
+        if (skipDescriptorsValidation()) return
         if (testFiles.any { file -> InTextDirectivesUtils.isDirectiveDefined(file.expectedText, "// SKIP_TXT") }) {
             assertFalse(".txt file should not exist if SKIP_TXT directive is used: $expectedFile", expectedFile.exists())
             return
@@ -416,6 +417,8 @@ abstract class AbstractDiagnosticsTest : BaseDiagnosticsTest() {
 
         KotlinTestUtils.assertEqualsToFile(expectedFile, allPackagesText)
     }
+
+    protected open fun skipDescriptorsValidation(): Boolean = false
 
     private fun createdAffectedPackagesConfiguration(
             testFiles: List<TestFile>,
