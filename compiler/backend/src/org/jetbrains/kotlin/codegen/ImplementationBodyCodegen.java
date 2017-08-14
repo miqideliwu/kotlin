@@ -1465,7 +1465,7 @@ public class ImplementationBodyCodegen extends ClassBodyCodegen {
 
         if (isAnonymousObject(descriptor)) {
             List<JvmMethodParameterSignature> superValues = superParameters.subList(superIndex, superParameters.size());
-            return new ObjectSuperCallArgumentGenerator(superValues, iv, offset);
+            return new ObjectSuperCallArgumentGenerator(superValues, iv, offset, superConstructor.getValueParameters(), codegen.typeMapper);
         }
         else {
             return new CallBasedArgumentGenerator(codegen, codegen.defaultCallGenerator, superConstructor.getValueParameters(),
@@ -1510,15 +1510,21 @@ public class ImplementationBodyCodegen extends ClassBodyCodegen {
         private final List<JvmMethodParameterSignature> parameters;
         private final InstructionAdapter iv;
         private int offset;
+        private final List<ValueParameterDescriptor> superValueParameters;
+        private final KotlinTypeMapper typeMapper;
 
         public ObjectSuperCallArgumentGenerator(
                 @NotNull List<JvmMethodParameterSignature> superParameters,
                 @NotNull InstructionAdapter iv,
-                int firstValueParamOffset
+                int firstValueParamOffset,
+                List<ValueParameterDescriptor> superValueParameters,
+                KotlinTypeMapper typeMapper
         ) {
             this.parameters = superParameters;
             this.iv = iv;
             this.offset = firstValueParamOffset;
+            this.superValueParameters = superValueParameters;
+            this.typeMapper = typeMapper;
         }
 
         @Override
@@ -1530,6 +1536,13 @@ public class ImplementationBodyCodegen extends ClassBodyCodegen {
         public void generateDefault(int i, @NotNull DefaultValueArgument argument) {
             Type type = parameters.get(i).getAsmType();
             pushDefaultValueOnStack(type, iv);
+        }
+
+        @Override
+        protected void generateDefaultJava(int i, @NotNull DefaultValueArgument argument) {
+            Type type = parameters.get(i).getAsmType();
+            StackValue argumentValue = StackValueKt.findJavaDefaultArgumentValue(superValueParameters.get(i), type, typeMapper);
+            argumentValue.put(type, iv);
         }
 
         @Override

@@ -27,14 +27,15 @@ import org.jetbrains.kotlin.load.kotlin.JvmPackagePartSource
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.descriptorUtil.firstArgumentValue
-import org.jetbrains.kotlin.resolve.descriptorUtil.getSuperClassNotAny
-import org.jetbrains.kotlin.resolve.descriptorUtil.module
+import org.jetbrains.kotlin.resolve.descriptorUtil.*
 import org.jetbrains.kotlin.serialization.deserialization.descriptors.DeserializedMemberDescriptor
 import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
+class ValueParameterData(val type: KotlinType, val hasDefaultValue: Boolean)
+
 fun copyValueParameters(
-        newValueParametersTypes: Collection<KotlinType>,
+        newValueParametersTypes: Collection<ValueParameterData>,
         oldValueParameters: Collection<ValueParameterDescriptor>,
         newOwner: CallableDescriptor
 ): List<ValueParameterDescriptor> {
@@ -42,20 +43,18 @@ fun copyValueParameters(
         "Different value parameters sizes: Enhanced = ${newValueParametersTypes.size}, Old = ${oldValueParameters.size}"
     }
 
-    return newValueParametersTypes.zip(oldValueParameters).map {
-        pair ->
-        val (newType, oldParameter) = pair
+    return newValueParametersTypes.zip(oldValueParameters).map { (newParameter, oldParameter) ->
         ValueParameterDescriptorImpl(
                 newOwner,
                 oldParameter,
                 oldParameter.index,
                 oldParameter.annotations,
                 oldParameter.name,
-                newType,
-                oldParameter.declaresDefaultValue(),
+                newParameter.type,
+                newParameter.hasDefaultValue,
                 oldParameter.isCrossinline,
                 oldParameter.isNoinline,
-                if (oldParameter.varargElementType != null) newOwner.module.builtIns.getArrayElementType(newType) else null,
+                if (oldParameter.varargElementType != null) newOwner.module.builtIns.getArrayElementType(newParameter.type) else null,
                 oldParameter.source
         )
     }
@@ -87,3 +86,16 @@ fun ValueParameterDescriptor.getParameterNameAnnotation(): AnnotationDescriptor?
     return annotation
 }
 
+sealed class AnnotationDefaultValue
+class StringDefaultValue(val value: String) : AnnotationDefaultValue()
+object NullDefaultValue : AnnotationDefaultValue()
+
+fun ValueParameterDescriptor.getDefaultValueFromAnnotation(): AnnotationDefaultValue? {
+    annotations.findAnnotation(JvmAnnotationNames.DEFAULT_VALUE_FQ_NAME)?.firstArgumentValue()?.safeAs<String>()?.let { return StringDefaultValue(it) }
+
+    if (annotations.hasAnnotation(JvmAnnotationNames.DEFAULT_NULL_FQ_NAME)) {
+        return NullDefaultValue
+    }
+
+    return null
+}

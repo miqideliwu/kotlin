@@ -52,6 +52,9 @@ public final class JvmAnnotationNames {
     public static final FqName ENHANCED_MUTABILITY_ANNOTATION = new FqName("kotlin.jvm.internal.EnhancedMutability");
 
     public static final FqName PARAMETER_NAME_FQ_NAME = new FqName("kotlin.internal.ParameterName");
+    public static final FqName DEFAULT_VALUE_FQ_NAME = new FqName("kotlin.internal.DefaultValue");
+    public static final FqName DEFAULT_NULL_FQ_NAME = new FqName("kotlin.internal.DefaultNull");
+
 
     private JvmAnnotationNames() {
     }
