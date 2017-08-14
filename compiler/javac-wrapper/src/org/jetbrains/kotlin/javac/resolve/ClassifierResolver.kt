@@ -35,7 +35,7 @@ class ClassifierResolver(private val javac: JavacWrapper) {
         if (tree in beingResolved) return null
         beingResolved(tree)
 
-        return tryToResolve2(tree, unit, containingElement).apply {
+        return tryToResolve(tree, unit, containingElement).apply {
             cache[tree] = this
             removeBeingResolved(tree)
         }
@@ -86,7 +86,7 @@ class ClassifierResolver(private val javac: JavacWrapper) {
         return pathSegments.apply { add(builder.toString()) }
     }
 
-    private fun tryToResolve2(tree: Tree, unit: CompilationUnitTree, containingElement: JavaElement): JavaClassifier? {
+    private fun tryToResolve(tree: Tree, unit: CompilationUnitTree, containingElement: JavaElement): JavaClassifier? {
         val pathSegments = pathSegments(tree.toString())
         val containingClass = when (containingElement) {
             is JavaClass -> containingElement
@@ -95,6 +95,7 @@ class ClassifierResolver(private val javac: JavacWrapper) {
                 containingElement.typeParameters.find { it.name == identifier }?.let { return it }
                 (containingElement as JavaMember).containingClass
             }
+            is JavaPackage -> return SingleTypeImportScope(javac, unit).findClass(pathSegments.first(), pathSegments)
             else -> throw UnsupportedOperationException()
         }
 
@@ -110,6 +111,10 @@ private abstract class Scope(protected val javac: JavacWrapper,
 
     abstract val parent: Scope?
 
+    /**
+     * @param name name of a class to find
+     * @param pathSegments name of a class to find that is split into path segments (e.g. Outer<String>.Inner -> {"Outer", "Inner"})
+     */
     abstract fun findClass(name: String, pathSegments: List<String>): JavaClassifier?
 
 }
@@ -132,9 +137,9 @@ private class GlobalScope(javac: JavacWrapper,
         pathSegments.forEachIndexed { index, _ ->
             if (index != 0) {
                 val packageFqName = pathSegments.take(index).joinToString(separator = ".")
-                helper.findPackage(packageFqName)?.let { pack ->
+                helper.findPackage(packageFqName)?.let { packageName ->
                     val className = pathSegments.drop(index)
-                    helper.findJavaOrKotlinClass(ClassId(pack, Name.identifier(className.first())))?.let { javaClass ->
+                    helper.findJavaOrKotlinClass(ClassId(packageName, Name.identifier(className.first())))?.let { javaClass ->
                         return helper.getJavaClassFromPathSegments(javaClass, className)
                     }
                 }
@@ -169,14 +174,8 @@ private class ImportOnDemandScope(javac: JavacWrapper,
     }
 
     private fun asteriskImports() =
-        compilationUnit.imports
-                .mapNotNull {
-                    val fqName = it.qualifiedIdentifier.toString()
-                    if (fqName.endsWith("*")) {
-                        fqName.dropLast(1)
-                    }
-                    else null
-                }
+            compilationUnit.imports
+                    .mapNotNull { it.qualifiedIdentifier.toString().takeIf { it.endsWith("*") }?.dropLast(1) }
 
 }
 
@@ -214,14 +213,8 @@ private class SingleTypeImportScope(javac: JavacWrapper,
     }
 
     private fun imports(firstSegment: String) =
-        (compilationUnit as JCTree.JCCompilationUnit).imports
-                .mapNotNull {
-                    val fqName = it.qualifiedIdentifier.toString()
-                    if (fqName.endsWith(".$firstSegment")) {
-                        fqName
-                    }
-                    else null
-                }
+            compilationUnit.imports
+                    .mapNotNull { it.qualifiedIdentifier.toString().takeIf { it.endsWith(".$firstSegment") } }
 }
 
 private class CurrentClassAndInnerScope(javac: JavacWrapper,
