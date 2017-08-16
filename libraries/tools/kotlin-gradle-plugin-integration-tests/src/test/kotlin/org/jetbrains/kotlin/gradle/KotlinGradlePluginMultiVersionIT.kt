@@ -125,4 +125,30 @@ class KotlinGradlePluginMultiVersionIT : BaseMultiGradleVersionIT() {
             assertContains(":compileKotlin", ":compileTestKotlin")
         }
     }
+
+    @Test
+    fun testJavaLibraryCompatibility() {
+        if (gradleVersion.split(".").map(String::toInt).let { (major, minor) -> major < 3 || major == 3 && minor < 4 }) {
+            println("The java-library plugin was introduced in Gradle 3.4 and is not present in Gradle $gradleVersion.")
+            return
+        }
+
+        val project = Project("javaLibraryProject", gradleVersion)
+        project.build("build") {
+            assertSuccessful()
+            assertNotContains("Could not register Kotlin output")
+            assertTasksExecuted(listOf(":lib:compileKotlin", ":app:compileKotlin"))
+        }
+
+        // Modify a library source and its usage and re-build the project:
+        for (path in listOf("lib/src/main/kotlin/Hello.kt", "app/src/main/kotlin/App.kt")) {
+            File(project.projectDir, path).modify { it.replace("hello", "hello1").apply { assert(it != this) } }
+        }
+
+        project.build("build") {
+            assertSuccessful()
+            assertNotContains("Could not register Kotlin output")
+            assertTasksExecuted(listOf(":lib:compileKotlin", ":app:compileKotlin"))
+        }
+    }
 }

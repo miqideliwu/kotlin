@@ -1,0 +1,17 @@
+buildscript {
+    ext.kotlin_version = "$kotlin_version"
+    repositories {
+        mavenLocal()
+        jcenter()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+subprojects {
+    repositories {
+        mavenLocal()
+        jcenter()
+    }
+}
