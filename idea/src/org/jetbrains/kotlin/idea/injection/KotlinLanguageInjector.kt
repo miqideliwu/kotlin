@@ -253,20 +253,14 @@ class KotlinLanguageInjector(
     }
 
     private fun injectInAnnotationCall(host: KtElement): InjectionInfo? {
-        val ktHost: KtElement = host
-        val argument = ktHost.parent as? KtValueArgument ?: return null
-
-        val callExpression = PsiTreeUtil.getParentOfType(ktHost, KtAnnotationEntry::class.java) ?: return null
-        val fqName = (callExpression.getResolvedCall(callExpression.analyze())?.candidateDescriptor as? ClassConstructorDescriptor)
+        val argument = host.parent as? KtValueArgument ?: return null
+        val annotationEntry = PsiTreeUtil.getParentOfType(host, KtAnnotationEntry::class.java) ?: return null
+        val fqName = (annotationEntry.getResolvedCall(annotationEntry.analyze())?.candidateDescriptor as? ClassConstructorDescriptor)
                              ?.containingDeclaration?.fqNameSafe?.toString() ?: return null
-
         val psiClass =
-                JavaPsiFacade.getInstance(ktHost.project).findClass(fqName, GlobalSearchScope.allScope(ktHost.project)) ?: return null
-
+                JavaPsiFacade.getInstance(host.project).findClass(fqName, GlobalSearchScope.allScope(host.project)) ?: return null
         val argumentName = argument.getArgumentName()?.asName?.identifier ?: "value"
-
         val method = psiClass.findMethodsByName(argumentName, false).single()
-
         return findInjection(method, Configuration.getInstance().getInjections(JavaLanguageInjectionSupport.JAVA_SUPPORT_ID))
     }
 
