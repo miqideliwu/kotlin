@@ -75,7 +75,7 @@ class KotlinLanguageInjector(
 
         val support = kotlinSupport ?: return
 
-        if (!ProjectRootsUtil.isInProjectOrLibSource(ktHost)) return
+        if (!ProjectRootsUtil.isInProjectOrLibSource(ktHost.containingFile.originalFile)) return
 
         val needImmediateAnswer = with(ApplicationManager.getApplication()) { isDispatchThread && !isUnitTestMode }
         val kotlinCachedInjection = ktHost.cachedInjectionWithModification
@@ -263,15 +263,11 @@ class KotlinLanguageInjector(
         val psiClass =
                 JavaPsiFacade.getInstance(ktHost.project).findClass(fqName, GlobalSearchScope.allScope(ktHost.project)) ?: return null
 
-        val method = psiClass.findMethodsByName(argument.name ?: "value", false).single()
+        val argumentName = argument.getArgumentName()?.asName?.identifier ?: "value"
 
-        val injectionInfo = findInjection(method, Configuration.getInstance().getInjections(JavaLanguageInjectionSupport.JAVA_SUPPORT_ID))
-        if (injectionInfo != null) {
-            return injectionInfo
-        }
+        val method = psiClass.findMethodsByName(argumentName, false).single()
 
-
-        return null
+        return findInjection(method, Configuration.getInstance().getInjections(JavaLanguageInjectionSupport.JAVA_SUPPORT_ID))
     }
 
     private fun injectionForJavaMethod(argument: KtValueArgument, javaMethod: PsiMethod): InjectionInfo? {
